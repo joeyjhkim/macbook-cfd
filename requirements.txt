@@ -1,0 +1,11 @@
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+pyyaml>=6.0
+
+# Test suite
+pytest>=7.4
+
+# PDF report builder
+reportlab>=4.0
+pillow>=9.0
