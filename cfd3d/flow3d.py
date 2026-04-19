@@ -11,9 +11,9 @@ Algorithm mirrors the 2D solver:
        projected to divergence-free on the interior.
     4. Re-pin Brinkman faces (immersed-boundary anchor).
 
-The 3D pressure Poisson is solved matrix-free with CG + Jacobi
-preconditioning (scipy.sparse.linalg.cg + LinearOperator). Direct
-factorization is avoided because fill-in in 3D is prohibitive.
+The 3D pressure Poisson is solved with direct LU factorization
+(scipy.sparse.linalg.splu), matching the 2D solver. At ~50k–90k
+flow-cell unknowns the fill-in remains manageable on a laptop.
 """
 
 from __future__ import annotations

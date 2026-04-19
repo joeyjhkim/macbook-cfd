@@ -303,7 +303,7 @@ def nomenclature_table():
         ("sym_q",        f"Volumetric heat source, W&middot;m{inv3}"),
         ("sym_h",        "Grid spacing, m"),
         ("sym_dt",       "Pseudo-time step, s"),
-        ("sym_alphas",   "Momentum / pressure relaxation (0.7 / 0.8)"),
+        ("sym_alphas",   "Momentum / pressure relaxation (2D: 0.7/0.8; 3D: 0.6/0.8)"),
         ("sym_Re",       "Reynolds number"),
         ("sym_Pr",       "Prandtl number"),
         ("sym_Ra",       "Rayleigh number"),
@@ -336,12 +336,12 @@ def table_grid_stats():
         [Paragraph("Parameter", head), Paragraph("2D", ctrh), Paragraph("3D", ctrh)],
         [Paragraph("Grid", cell), Paragraph("260 &times; 180", ctr), Paragraph("90 &times; 62 &times; 16", ctr)],
         [Paragraph("Total cells", cell), Paragraph("46,800", ctr), Paragraph("89,280", ctr)],
-        [Paragraph("Flow cells", cell), Paragraph("18,875", ctr), Paragraph("49,662", ctr)],
-        [Paragraph("Runtime (laptop)", cell), Paragraph("~6 s", ctr), Paragraph("~20 s", ctr)],
+        [Paragraph("Flow cells", cell), Paragraph("18,875", ctr), Paragraph("62,736", ctr)],
+        [Paragraph("Runtime (laptop)", cell), Paragraph("~6 s", ctr), Paragraph("~45 s", ctr)],
         [Paragraph("Iterations", cell), Paragraph("1,997", ctr), Paragraph("867", ctr)],
         [Paragraph("Interior div. L<sub>&infin;</sub>", cell),
-         Paragraph("3.6&times;10<super>-13</super> s<super>-1</super>", ctr),
-         Paragraph("1.1&times;10<super>-11</super> s<super>-1</super>", ctr)],
+         Paragraph("3.9&times;10<super>-13</super> s<super>-1</super>", ctr),
+         Paragraph("1.0&times;10<super>-12</super> s<super>-1</super>", ctr)],
     ]
     t = Table(data, colWidths=[1.3 * inch, 0.9 * inch, 1.1 * inch])
     t.setStyle(TableStyle([
@@ -448,8 +448,10 @@ def build_story(col_w, full_w):
         "Brinkman penalization, and direct sparse LU factorization of the "
         "pressure-correction Poisson equation. A three-level grid refinement "
         "study confirms that the lateral thermal metrics are mesh-converged "
-        "(GCI &le; 1.7%). All four published metrics fall within ranges "
-        "reported by five independent sources. The 2D model predicts "
+        "(GCI &le; 1.7%). Predictions for the four thermal metrics "
+        "agree with published ranges compiled from up to five independent "
+        "sources (per-metric counts in Table 3) to within 1.2&deg;C. "
+        "The 2D model predicts "
         "SoC = 96&deg;C; the 3D model predicts 81&deg;C; the published "
         "real-world range is 82&ndash;98&deg;C. The 2D/3D spread is "
         "attributable to the additional heat-loss surface area resolved "
@@ -524,8 +526,8 @@ def build_story(col_w, full_w):
     S.append(eqn_image("eq5", "5", col_w))
     S.append(para(
         "where <b>S</b> is the symmetric strain-rate tensor and "
-        "&#8467;<sub>m</sub> = 4 mm is the mixing length (~2% of "
-        "channel height). The eddy viscosity is capped at "
+        "&#8467;<sub>m</sub> = 4 mm is the mixing length (~1.6% of "
+        "domain height). The eddy viscosity is capped at "
         "&nu;<sub>t</sub>/&nu; &le; 80 to prevent unphysical blow-up. "
         "Turbulence is disabled in the 3D model (&nu;<sub>t</sub> = 0) "
         "because the coarser grid cannot resolve shear-layer structure "
@@ -541,7 +543,7 @@ def build_story(col_w, full_w):
     S.append(bullet(
         "<b>(2) SIMPLE-style under-relaxation</b> of the predictor "
         "<i>before</i> projection, with momentum relaxation "
-        "&alpha;<sub>u</sub> = 0.7:"))
+        "&alpha;<sub>u</sub> = 0.7 (2D) or 0.6 (3D):"))
     S.append(eqn_image("eq7", "7", col_w))
     S.append(bullet(
         "<b>(3) Pressure-correction Poisson</b> on flow cells:"))
@@ -556,7 +558,7 @@ def build_story(col_w, full_w):
     S.append(para("The pseudo-time step satisfies a combined "
                   "convective/viscous CFL constraint:"))
     S.append(eqn_image("eq9", "9", col_w))
-    S.append(para("with CFL = 0.35."))
+    S.append(para("with CFL = 0.35 (2D) or 0.30 (3D)."))
 
     S.append(Paragraph("3.4 Pressure Poisson solver", STY_H2))
     S.append(para(
@@ -564,7 +566,7 @@ def build_story(col_w, full_w):
         f"7-point (3D) stencil on cells inside the {code('flow_mask')}. Both "
         f"dimensions use direct LU factorization via SciPy&rsquo;s {code('splu')}; "
         "the factorization is reused for every pseudo-time step because "
-        "the matrix is static. At ~19,000 (2D) and ~50,000 (3D) flow-cell "
+        "the matrix is static. At ~19,000 (2D) and ~63,000 (3D) flow-cell "
         "unknowns, fill-in remains manageable (&lt;100 MB)."))
 
     S.append(Paragraph("3.5 Energy equation", STY_H2))
@@ -572,14 +574,14 @@ def build_story(col_w, full_w):
         "Temperature is computed via a steady-state solve. First-order "
         "upwind is used for advection (Peclet-robust, diagonally dominant) "
         "and harmonic-mean face conductivity for diffusion. The harmonic "
-        "mean handles sharp jumps between high-k metal (copper, "
+        "mean handles sharp jumps between high-k metal (vapor chamber, "
         "k = 2000 W/m&middot;K) and low-k air (k = 0.028 W/m&middot;K)."))
 
     S.append(Paragraph("3.6 Convergence diagnostics", STY_H2))
     S.append(para(
         f"Two independent residuals are tracked. First, the L<sub>&infin;</sub> "
-        f"divergence on <i>deep interior</i> flow cells (cells whose six face "
-        f"neighbours are all inside the {code('flow_mask')}) measures true mass "
+        f"divergence on <i>deep interior</i> flow cells (cells whose four (2D) "
+        f"or six (3D) face neighbours are all inside the {code('flow_mask')}) measures true mass "
         "conservation. Second, the L<sub>&infin;</sub> momentum update "
         "max|<b>u</b><super>n+1</super> - <b>u</b><super>n</super>| measures "
         "approach to steady state."))
@@ -598,12 +600,16 @@ def build_story(col_w, full_w):
 
     S.append(Paragraph("4.2 Components and power", STY_H2))
     S.append(para(
-        "Twenty-two components model the SoC (15 W), dual RAM modules (2 W "
-        "each), dual fan blowers, vapor chamber (k = 2000 W/m&middot;K), "
-        "logic board, SSD controllers, speakers, and six battery cells. The "
-        "3D model adds a thermal interface material (TIM) layer above the "
-        "SoC die with k<sub>TIM</sub> = 0.14 W/m&middot;K in a 1-mm-thick "
-        "slab. This reproduces R<sub>jc</sub> &asymp; 3 K/W."))
+        "The 2D model uses twenty-two components to represent the SoC "
+        "(15 W), dual RAM modules (2 W each), dual fan blowers, vapor "
+        "chamber (k = 2000 W/m&middot;K), logic board, SSD and Thunderbolt "
+        "controllers, speakers, and six battery cells. The 3D model uses "
+        "twenty-one components; it omits the Thunderbolt controllers, "
+        "power controller, and top vapor-chamber strip, and adds a "
+        "central vapor-chamber slab, a homogenized exhaust fin stack, "
+        "and a thermal interface material (TIM) layer above the SoC "
+        "die with k<sub>TIM</sub> = 0.14 W/m&middot;K in a 1-mm-thick "
+        "slab, yielding R<sub>jc</sub> &asymp; 9.6 K/W."))
 
     S.append(Paragraph("4.3 Chassis-conductivity closure", STY_H2))
     S.append(para(
@@ -640,7 +646,7 @@ def build_story(col_w, full_w):
         "1. Top-down component layout. Cyan line: bottom-case inlet vent. "
         "Top edge: dual rear-hinge exhaust bands. Fans (orange) flank "
         "the SoC, drawing air front-to-back across the vapor chamber. "
-        "Batteries (pink) fill the front half below the logic board.",
+        "Battery cells fill the front half below the inlet line.",
         col_w))
 
     # --- 5. Results ---
@@ -683,10 +689,14 @@ def build_story(col_w, full_w):
 
     S.append(Paragraph("5.3 3D flow field", STY_H2))
     S.append(para(
-        "Figure 5 presents two cross-sections of the 3D velocity field. "
-        "The vertical cut shows air entering the narrow bottom-case slit, "
-        "rising through the battery cavity, deflecting around the logic "
-        "board, and exiting laterally through the rear hinge outlets."))
+        "Figure 5 presents two cross-sections of the 3D velocity field: "
+        "a top-down slice at z = 8.5 mm and a vertical cross-section at "
+        "y = 124.5 mm (just behind the bottom-case inlet, intersecting "
+        "the logic-board plane). The vertical cut shows air entering the "
+        "narrow bottom-case slit, rising into the open chassis volume, "
+        "deflecting around the thin logic-board slab, then (in the "
+        "top-down slice) accelerating through the fan columns and "
+        "exiting through the rear hinge outlets."))
     S.append(figure("macbook_velocity3d.png",
         "5. 3D velocity magnitude (m/s): top-down slice at z = 8.5 mm "
         "(left) and vertical cross-section at y = 124.5 mm (right). The "
@@ -708,11 +718,15 @@ def build_story(col_w, full_w):
     S.append(Paragraph("5.5 Solver convergence", STY_H2))
     S.append(para(
         "Figures 7 and 8 plot the residual evolution. The interior "
-        "divergence sits at machine precision (~10<super>-13</super> "
-        "s<super>-1</super> in 2D, ~10<super>-11</super> s<super>-1</super> "
-        "in 3D) from iteration one. The momentum residual decays "
-        "monotonically by four orders of magnitude (2D) or two orders "
-        "(3D)."))
+        "divergence sits at machine precision in 2D "
+        "(~10<super>-13</super> s<super>-1</super>, flat from iteration "
+        "one) and reaches machine precision in 3D "
+        "(~10<super>-12</super> s<super>-1</super>) after a few hundred "
+        "iterations, starting from ~10<super>-10</super> s<super>-1</super> "
+        "in the initial transient. The momentum residual decays by "
+        "approximately four orders of magnitude (2D) or three orders "
+        "(3D) across the pseudo-time history, with mild oscillations "
+        "superimposed on the overall decay."))
     S.append(figure("convergence_2d.png",
         "7. 2D solver convergence. Left axis: momentum residual "
         "max|u<super>n+1</super> - u<super>n</super>| (m/s). Right axis: "
@@ -720,7 +734,7 @@ def build_story(col_w, full_w):
         col_w))
     S.append(figure("convergence_3d.png",
         "8. 3D solver convergence. Axes as in Fig. 7. Final state: 867 "
-        "iterations, interior divergence 1.1&times;10<super>-11</super> "
+        "iterations, interior divergence 1.0&times;10<super>-12</super> "
         "s<super>-1</super>.", col_w))
 
     S.append(Paragraph("5.6 Grid refinement study", STY_H2))
@@ -729,10 +743,14 @@ def build_story(col_w, full_w):
         "resolutions. The grid convergence index (GCI) between baseline "
         "and fine grids is reported in Table 2 using r = 2, safety factor "
         "F<sub>s</sub> = 1.25, and theoretical order p = 2. Lateral "
-        "metrics are mesh-converged. The SoC is mesh-sensitive because "
-        "different grids quantize the SoC bounding box into different "
-        "effective surface-area-to-volume ratios; it nonetheless remains "
-        "inside the published 82-98&deg;C band at every resolution."))
+        "metrics are mesh-converged at the baseline and fine resolutions. "
+        "The SoC is mesh-sensitive because different grids quantize the "
+        "SoC bounding box into different effective surface-area-to-volume "
+        "ratios: the coarse grid (130&times;90) underpredicts SoC at "
+        "69&deg;C (outside the band), the baseline (260&times;180) "
+        "saturates at 96&deg;C near the upper end of the published range, "
+        "and the fine grid (520&times;360) settles at 82&deg;C, "
+        "essentially at the lower end of the published 82-98&deg;C band."))
     S.append(table_gci())
     S.append(Paragraph(
         "<b>Tbl. 2</b> Grid convergence index (baseline vs fine).",
@@ -746,9 +764,11 @@ def build_story(col_w, full_w):
     S.append(figure("grid_refinement.png",
         "9. 2D grid refinement at three resolutions (130&times;90, "
         "260&times;180, 520&times;360) plotted against grid spacing "
-        "1/n<sub>x</sub>. Green bands: published measurement ranges. "
+        "1/n<sub>x</sub>. Green bands: YAML pass/fail validation ranges. "
         "(a) SoC mean. (b) Battery maximum. (c) Palm-rest mean. "
-        "(d) Exhaust mean. All values remain within the published bands.",
+        "(d) Exhaust mean. Baseline and fine grids fall within the bands "
+        "for the lateral metrics; the coarse grid is outside several "
+        "bands due to bounding-box quantization.",
         col_w, aspect=0.68))
 
     S.append(Paragraph("5.7 Validation against published data", STY_H2))
@@ -809,8 +829,8 @@ def build_story(col_w, full_w):
     S.append(Paragraph("(iii) Explicit TIM layer.", STY_H3))
     S.append(para(
         "The 3D model resolves a 1-mm low-conductivity layer between the "
-        "SoC die and the vapor chamber. This reproduces R<sub>jc</sub> "
-        "&asymp; 3 K/W. The 2D model has no explicit analog; its "
+        "SoC die and the vapor chamber. This yields R<sub>jc</sub> "
+        "&asymp; 9.6 K/W. The 2D model has no explicit analog; its "
         "equivalent thermal resistance is implicitly lumped into the "
         "depth closure."))
 
@@ -909,9 +929,9 @@ def build_story(col_w, full_w):
         "The 2D model predicts SoC = 96&deg;C, battery 39&deg;C, palm "
         "rest 34&deg;C, and exhaust 43&deg;C. The 3D model predicts "
         "SoC = 81&deg;C, battery 35&deg;C, palm rest 34&deg;C, and "
-        "exhaust 40&deg;C. All eight values fall within the "
+        "exhaust 40&deg;C. All eight values agree with the "
         "82-98&deg;C (SoC), 35-41&deg;C (battery), 27-37&deg;C (palm "
-        "rest), and 40-50&deg;C (exhaust) published bands."))
+        "rest), and 40-50&deg;C (exhaust) published bands to within 1.2&deg;C."))
     S.append(para(
         "A three-level grid refinement study gives GCI &le; 1.7% for "
         "the lateral metrics; the SoC is mesh-sensitive due to "

@@ -11,9 +11,10 @@ Two simulators live in this repo:
 
 Both solvers share the same architecture: staggered MAC grid + Chorin
 projection + implicit Brinkman penalization for immersed boundaries.
-The 2D solver uses a direct (`splu`) pressure Poisson; the 3D solver
-uses matrix-free conjugate gradients with Jacobi preconditioning,
-because LU fill-in in 3D is prohibitive.
+Both solve the pressure Poisson with direct LU factorization via
+`scipy.sparse.linalg.splu`; the factorization is reused across all
+pseudo-time steps because the matrix is static. At ~50k–90k flow-cell
+unknowns in 3D the fill-in is manageable (<100 MB on a laptop).
 
 This is a rewrite of an earlier potential-flow version (preserved in
 `legacy/`). The change you'll notice most: the velocity field now shows
@@ -28,7 +29,7 @@ from an irrotational stream function.
 python3 run.py                          # default config + figures
 python3 run.py --no-figures --quiet     # fast, for CI
 
-# 3D (~60–90 s on a laptop; 90x62x16 grid, ~170k cells)
+# 3D (~45 s on a laptop; 90x62x16 grid, ~89k cells)
 python3 run3d.py                         # 3D with figures
 python3 run3d.py --no-figures --quiet    # 3D CI mode
 
@@ -114,10 +115,10 @@ four published metrics fall in their target ranges:
 
 | Metric          | Real range  | Sim   |
 |-----------------|-------------|-------|
-| SoC mean        | 80 – 100 °C | 95.8  |
-| Battery max     | 38 – 45 °C  | 39.4  |
-| Palm rest mean  | 30 – 34 °C  | 33.6  |
-| Exhaust mean    | 45 – 60 °C  | 43.4  |
+| SoC mean        | 80 – 100 °C | 95.7  |
+| Battery max     | 38 – 45 °C  | 39.3  |
+| Palm rest mean  | 29 – 36 °C  | 33.6  |
+| Exhaust mean    | 42 – 60 °C  | 43.4  |
 
 ## Project layout
 
@@ -181,19 +182,19 @@ legacy/                      original potential-flow single-file scripts
   rather than a resolved channel. Exhaust air temperature therefore
   underpredicts relative to published data — the 3D exhaust range was
   widened accordingly.
-- **Constant viscosity** (no 3D turbulence model) to keep the matrix-free
-  CG Poisson solver tractable at this resolution.
-- **Grid resolution.** 90x62x16 = ~170k cells runs in ~60–90 s on a
+- **Constant viscosity** (no 3D turbulence model) because the coarser
+  grid cannot resolve shear-layer structure at this length scale.
+- **Grid resolution.** 90x62x16 = ~89k cells runs in ~45 s on a
   laptop. A finer grid (say 180x120x32) would resolve fin stacks and fan
-  inlet vortices but needs an iterative multigrid preconditioner
-  (pyamg or equivalent).
+  inlet vortices but the LU fill-in would likely require switching to
+  an iterative multigrid solver (pyamg or equivalent).
 
 ## 3D architecture
 
 ```
 cfd3d/config3d.py       3D YAML loader, Component3D with explicit z-range
 cfd3d/geometry3d.py     3D MAC grid (cells, x-/y-/z-faces), masks, sources
-cfd3d/flow3d.py         3D Chorin projection + matrix-free CG pressure solve
+cfd3d/flow3d.py         3D Chorin projection + direct LU pressure solve (splu)
 cfd3d/energy3d.py       3D convection-diffusion + direct sparse solve
 cfd3d/visualize3d.py    mid-z / mid-y slice plots for T and |V|
 cfd3d/validate3d.py     reduce stats, compare to validation ranges

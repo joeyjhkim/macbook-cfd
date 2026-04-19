@@ -244,8 +244,9 @@
   study confirms that the lateral thermal metrics are mesh-converged
   (GCI\,$\le$\,\SI{1.7}{\percent}). Predictions for the four thermal
   metrics---SoC die, battery maximum, palm-rest surface, and exhaust
-  air---agree with the range reported by five independent sources to
-  within \SI{1.2}{\celsius}.
+  air---agree with published ranges compiled from up to five
+  independent sources (per-metric counts in Table~\ref{tab:valid})
+  to within \SI{1.2}{\celsius}.
   The 2D model predicts SoC\,$=\SI{96}{\celsius}$; the 3D model
   predicts \SI{81}{\celsius}; the published range is
   82--98\,\si{\celsius}. The 2D/3D spread reflects the additional
@@ -282,7 +283,7 @@ $\alpha$                       & Thermal diffusivity $k/(\rho c_{p})$, \si{\squa
 $\qsrc$                        & Volumetric heat source, \si{\watt\per\cubic\meter} \\
 $h$                            & Grid spacing, \si{m} \\
 $\Delta t$                     & Pseudo-time step, \si{s} \\
-$\alpha_{u},\;\alpha_{p}$      & Momentum / pressure relaxation (0.7 / 0.8) \\
+$\alpha_{u},\;\alpha_{p}$      & Momentum / pressure relaxation (2D: 0.7/0.8; 3D: 0.6/0.8) \\
 $\Reyn$                        & Reynolds number, $\rho U L/\mu$ \\
 $\Pran$                        & Prandtl number, $\nu/\alpha$ \\
 $\Ra$                          & Rayleigh number, $g\beta_{T}\,\Delta T\,L^{3}/(\nu\alpha)$ \\
@@ -393,7 +394,7 @@ The algebraic mixing-length model is used in 2D:
 %
 where $\Sbm$ is the symmetric strain-rate tensor and
 $\ell_{m} = \SI{4}{mm}$ is the mixing length
-($\approx$\,2\,\si{\percent} of channel height). The eddy viscosity
+($\approx$\,1.6\,\si{\percent} of domain height). The eddy viscosity
 is capped at $\nut/\nu \le 80$ to prevent unphysical blow-up in
 highly sheared cells. Turbulence is disabled in the 3D model
 ($\nut = 0$) because the coarser grid cannot resolve shear-layer
@@ -421,7 +422,7 @@ implicit Brinkman drag:
 %
 Second, a SIMPLE-style under-relaxation~\cite{patankar1980} of the
 predictor before projection, with momentum relaxation
-$\alpha_{u}=0.7$:
+$\alpha_{u}=0.7$ (2D) or $0.6$ (3D):
 %
 \begin{equation}
   \ubf^{\,*} \leftarrow \ubf^{n} + \alpha_{u}\,(\ubf^{\,*}-\ubf^{n}).
@@ -454,7 +455,7 @@ constraint:
   \label{eq:cfl}
 \end{equation}
 %
-with $\mathrm{CFL} = 0.35$.
+with $\mathrm{CFL} = 0.35$ (2D) or $0.30$ (3D).
 
 \needspace{2\baselineskip}
 \subsection{Pressure Poisson solver}
@@ -464,7 +465,7 @@ The Poisson matrix is assembled once from the 5-point (2D) or
 use direct LU factorization via SciPy's \texttt{splu}~\cite{scipy};
 the factorization is reused for every pseudo-time step because the
 matrix is static. At $n \approx \num{19e3}$ (2D) and
-$n \approx \num{50e3}$ (3D) flow-cell unknowns, the fill-in remains
+$n \approx \num{63e3}$ (3D) flow-cell unknowns, the fill-in remains
 manageable on a laptop ($<$\,\SI{100}{MB}). This design eliminates
 the convergence fragility of iterative CG/Jacobi solvers.
 
@@ -476,7 +477,7 @@ field has converged. First-order upwind is used for advection
 (Peclet-robust, diagonally dominant); harmonic-mean face
 conductivity is used for diffusion. The harmonic mean represents
 sharp conductivity jumps between high-$k$ metal
-($k = \SI{2000}{W\per\meter\per\kelvin}$, copper) and low-$k$ air
+($k = \SI{2000}{W\per\meter\per\kelvin}$, vapor chamber) and low-$k$ air
 ($k = \SI{0.028}{W\per\meter\per\kelvin}$) without Gibbs-style
 artefacts at component boundaries.
 
@@ -485,7 +486,7 @@ artefacts at component boundaries.
 
 Two independent residuals are tracked. The first is the
 $\Linf$ divergence on \emph{deep interior} flow cells---cells whose
-six face neighbours are all inside the flow mask---which measures
+four (2D) or six (3D) face neighbours are all inside the flow mask---which measures
 true mass conservation. The second is the $\Linf$ momentum update
 $\max\lvert\ubf^{n+1}-\ubf^{n}\rvert$, which measures approach to
 steady state. A run is declared converged when both fall below
@@ -519,11 +520,11 @@ statistics are listed in Table~\ref{tab:grid}.
     \midrule
     Grid                          & $260\!\times\!180$     & $90\!\times\!62\!\times\!16$ \\
     Total cells                   & \num{46800}            & \num{89280} \\
-    Flow cells                    & \num{18875}            & \num{49662} \\
-    Runtime (laptop)              & $\sim\!\SI{6}{s}$      & $\sim\!\SI{20}{s}$ \\
+    Flow cells                    & \num{18875}            & \num{62736} \\
+    Runtime (laptop)              & $\sim\!\SI{6}{s}$      & $\sim\!\SI{45}{s}$ \\
     Iterations                    & \num{1997}             & \num{867} \\
     Interior div.\ $\Linf$ (\si{\per\second})
-                                  & $\num{3.6e-13}$        & $\num{1.1e-11}$ \\
+                                  & $\num{3.9e-13}$        & $\num{1.0e-12}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -531,15 +532,21 @@ statistics are listed in Table~\ref{tab:grid}.
 \needspace{2\baselineskip}
 \subsection{Components and power}
 
-Twenty-two components model the SoC (\SI{15}{\watt}), dual RAM
-modules (\SI{2}{\watt} each), dual fan blowers, vapor chamber
-($k = \SI{2000}{W\per\meter\per\kelvin}$), logic board, SSD
-controllers, speakers, and six battery cells. The 3D model adds
-a thermal-interface-material (TIM) layer above the SoC die with
+The 2D model uses twenty-two components to represent the SoC
+(\SI{15}{\watt}), dual RAM modules (\SI{2}{\watt} each), dual fan
+blowers, vapor chamber
+($k = \SI{2000}{W\per\meter\per\kelvin}$), logic board, SSD and
+Thunderbolt controllers, speakers, and six battery cells. The 3D
+model uses twenty-one components; it omits the Thunderbolt
+controllers, power controller, and top vapor-chamber strip, and
+adds a central vapor-chamber slab, a homogenized exhaust fin
+stack, and a thermal-interface-material (TIM) layer above the
+SoC die with
 $\kTIM = \SI{0.14}{W\per\meter\per\kelvin}$ in a \SI{1}{mm}-thick
-slab. This reproduces a die-to-vapor-chamber resistance of
-$R_{jc} \approx \SI{3}{K\per\watt}$, consistent with published
-silicon junction-to-case values.
+slab, yielding $R_{jc} \approx \SI{9.6}{K\per\watt}$. This
+effective resistance is higher than bare-die junction-to-case
+values but absorbs unresolved interface resistances in the
+die-to-vapor-chamber path.
 
 \needspace{2\baselineskip}
 \subsection{Chassis-conductivity closure}
@@ -594,7 +601,7 @@ other external surfaces.
     chassis used in both models. Cyan line: bottom-case inlet vent.
     Top edge: dual rear-hinge exhaust bands. Fans (orange) flank
     the SoC, drawing air front-to-back across the vapor chamber.
-    Batteries (pink) fill the front half below the logic board.}
+    Battery cells fill the front half below the inlet line.}
   \label{fig:layout}
 \end{figure*}
 
@@ -671,11 +678,12 @@ at 35--40\,\si{\celsius}.
 
 Figure~\ref{fig:v3d} presents two cross-sections of the 3D velocity
 field: a top-down slice at $z = \SI{8.5}{mm}$ and a vertical
-cross-section at $y = \SI{124.5}{mm}$. The vertical cut shows air
-entering the narrow bottom-case slit at $z = 0$, rising through
-the battery cavity, deflecting around the logic board, accelerating
-through the fan columns, and exiting laterally through the rear
-hinge outlets.
+cross-section at $y = \SI{124.5}{mm}$ (just behind the bottom-case
+inlet, intersecting the logic-board plane). The vertical cut shows
+air entering the narrow bottom-case slit at $z = 0$, rising into
+the open chassis volume, deflecting around the thin logic-board
+slab, then (in the top-down slice) accelerating through the fan
+columns and exiting through the rear hinge outlets.
 
 \begin{figure*}[!tbp]
   \centering
@@ -712,14 +720,17 @@ bottom case (fixed-temperature Dirichlet) and the keyboard deck
 \label{sec:rconv}
 
 Figures~\ref{fig:conv2d} and \ref{fig:conv3d} plot the residual
-evolution. The interior divergence sits at machine precision
-($\sim\!\num{e-13}$\,\si{\per\second} in 2D;
-$\sim\!\num{e-11}$\,\si{\per\second} in 3D) from iteration one.
+evolution. The interior divergence sits at machine precision in
+2D ($\sim\!\num{e-13}$\,\si{\per\second}, flat from iteration one)
+and reaches machine precision in 3D ($\sim\!\num{e-12}$\,\si{\per\second})
+after a few hundred iterations, starting from
+$\sim\!\num{e-10}$\,\si{\per\second} in the initial transient.
 This establishes that the pressure correction is solved exactly up
 to floating-point round-off and that mass is neither created nor
 destroyed in interior flow cells. The momentum residual decays
-monotonically by four orders of magnitude (2D) or two orders
-(3D).
+by approximately four orders of magnitude (2D) or three orders
+(3D) across the pseudo-time history, with mild oscillations
+superimposed on the overall decay.
 
 \begin{figure*}[!tbp]
   \centering
@@ -735,7 +746,7 @@ monotonically by four orders of magnitude (2D) or two orders
   \includegraphics[width=0.92\textwidth]{convergence_3d.png}
   \caption{3D solver convergence. Axes as in Fig.~\ref{fig:conv2d}.
     Final state: \num{867} iterations, interior divergence
-    $\num{1.1e-11}$\,\si{\per\second}.}
+    $\num{1.0e-12}$\,\si{\per\second}.}
   \label{fig:conv3d}
 \end{figure*}
 
@@ -756,9 +767,12 @@ safety factor $F_{s}=1.25$, and theoretical order $p=2$.
   \includegraphics[width=0.92\textwidth]{grid_refinement.png}
   \caption{2D grid refinement at three resolutions ($130\!\times\!90$,
     $260\!\times\!180$, $520\!\times\!360$) plotted against grid
-    spacing $1/n_{x}$. Green bands: published measurement ranges.
+    spacing $1/n_{x}$. Green bands: YAML pass/fail validation ranges.
     (a)~SoC mean. (b)~Battery maximum. (c)~Palm-rest mean.
-    (d)~Exhaust mean. All values remain within the published bands.}
+    (d)~Exhaust mean. Baseline and fine grids fall within the bands
+    for the lateral metrics; the coarse grid is outside several bands
+    due to bounding-box quantization, illustrating the need for
+    sufficient resolution.}
   \label{fig:grid}
 \end{figure*}
 
@@ -791,11 +805,15 @@ safety factor $F_{s}=1.25$, and theoretical order $p=2$.
   \end{threeparttable}
 \end{table}
 
-Lateral metrics are mesh-converged. The SoC is mesh-sensitive
-because different grids quantize the SoC bounding box into
-different effective surface-area-to-volume ratios. The SoC
-prediction nonetheless remains inside the published
-82--98\,\si{\celsius} band at every resolution.
+Lateral metrics are mesh-converged at the baseline and fine
+resolutions. The SoC is mesh-sensitive because different grids
+quantize the SoC bounding box into different effective
+surface-area-to-volume ratios: the coarse grid ($130\!\times\!90$)
+underpredicts SoC at \SI{69}{\celsius} (outside the band), the
+baseline ($260\!\times\!180$) saturates at \SI{96}{\celsius} near
+the upper end of the published range, and the fine grid
+($520\!\times\!360$) settles at \SI{82}{\celsius}, essentially at
+the lower end of the published \SIrange{82}{98}{\celsius} band.
 
 \needspace{2\baselineskip}
 \subsection{Validation against published data}
@@ -886,8 +904,8 @@ mass.
 
 \paragraph*{(iii) Explicit TIM layer}
 The 3D model resolves a \SI{1}{mm} low-conductivity layer between
-the SoC die and the vapor chamber. This reproduces
-$R_{jc} \approx \SI{3}{K\per\watt}$. The 2D model has no explicit
+the SoC die and the vapor chamber. This yields
+$R_{jc} \approx \SI{9.6}{K\per\watt}$. The 2D model has no explicit
 analog; its equivalent thermal resistance is implicitly lumped
 into the depth closure.
 
@@ -1006,10 +1024,10 @@ The 2D model predicts SoC\,$=\SI{96}{\celsius}$, battery
 \SI{39}{\celsius}, palm rest \SI{34}{\celsius}, and exhaust
 \SI{43}{\celsius}. The 3D model predicts
 SoC\,$=\SI{81}{\celsius}$, battery \SI{35}{\celsius}, palm rest
-\SI{34}{\celsius}, and exhaust \SI{40}{\celsius}. All eight values
-fall within the 82--98\,\si{\celsius} (SoC),
-35--41\,\si{\celsius} (battery), 27--37\,\si{\celsius} (palm rest),
-and 40--50\,\si{\celsius} (exhaust) published bands.
+\SI{34}{\celsius}, and exhaust \SI{40}{\celsius}. All eight values agree with the
+82--98\,\si{\celsius} (SoC), 35--41\,\si{\celsius} (battery),
+27--37\,\si{\celsius} (palm rest), and 40--50\,\si{\celsius}
+(exhaust) published bands to within \SI{1.2}{\celsius}.
 
 A three-level grid refinement study gives
 $\mathrm{GCI} \le \SI{1.7}{\percent}$ for the lateral metrics; the

@@ -108,8 +108,6 @@ class SolverParams3D:
     pressure_relax: float
     momentum_relax: float
     brinkman_penalty_per_s: float
-    pressure_cg_tol: float
-    pressure_cg_maxiter: int
     log_every: int
 
 
@@ -241,8 +239,6 @@ def load(path: str | Path) -> Config3D:
         pressure_relax=float(s["pressure_relax"]),
         momentum_relax=float(s["momentum_relax"]),
         brinkman_penalty_per_s=float(s["brinkman_penalty_per_s"]),
-        pressure_cg_tol=float(s["pressure_cg_tol"]),
-        pressure_cg_maxiter=int(s["pressure_cg_maxiter"]),
         log_every=int(s["log_every"]),
     )
 

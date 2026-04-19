@@ -36,7 +36,6 @@ def _mini_config() -> cfg.Config3D:
             max_iterations=50, tolerance=1e-3, cfl=0.3,
             pressure_relax=0.8, momentum_relax=0.6,
             brinkman_penalty_per_s=1e5,
-            pressure_cg_tol=1e-4, pressure_cg_maxiter=40,
             log_every=100,
         ),
         components=(

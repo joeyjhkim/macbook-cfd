@@ -52,15 +52,13 @@ solver:
   pressure_relax: 0.8
   momentum_relax: 0.6
   brinkman_penalty_per_s: 1.0e5
-  pressure_cg_tol: 1.0e-6
-  pressure_cg_maxiter: 300
   log_every: 100
 
 components:
   # --- vapor chamber + heatsink (heat highway from SoC to exhaust) ---
   # TIM: thermal interface material (paste + IHS + spreader). 1-cell-thick
-  # layer above SoC with calibrated k to reproduce the real R_jc ≈ 3 K/W
-  # from die to vapor chamber.  k = t / (R · A) = 1e-3 / (3 · 7.4e-4) ≈ 0.45
+  # layer above SoC. Calibrated k=0.14 yields R_jc ≈ 9.6 K/W, absorbing
+  # unresolved interface resistances in the die-to-VC path.
   - { name: TIM,          x_mm: [155, 186], y_mm: [158, 182], z_mm: [11, 12], q_w: 0.0, k_w_mk: 0.14 }
   # VC_center: slab above TIM, connects to lateral VCs + exhaust.
   - { name: VC_center,   x_mm: [131, 210], y_mm: [158, 218], z_mm: [12, 14], q_w: 0.0, k_w_mk: 2000 }
