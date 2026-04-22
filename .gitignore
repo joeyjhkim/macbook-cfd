@@ -21,3 +21,17 @@ htmlcov/
 
 # Claude Code workspace
 .claude/
+
+# Secrets — defensive patterns even though this project has no credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+credentials.json
+secrets.json
+*.secret.*
